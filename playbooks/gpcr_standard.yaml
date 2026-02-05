@@ -1,0 +1,150 @@
+name: GPCR Standard Workflow
+description: End-to-end GPCR structure determination pipeline
+version: "1.0"
+
+config:
+  target_class: GPCR
+  symmetry: C1
+  resolution_target: 3.5
+
+inputs:
+  dataset:
+    movies_path: ""
+    pixel_size: 1.05
+    voltage: 300
+    spherical_aberration: 2.7
+    total_dose: 50.0
+  
+  gpcr:
+    min_particle_diameter: 80
+    max_particle_diameter: 150
+    box_size: 256
+    num_2d_classes: 50
+    num_abinit_classes: 3
+
+steps:
+  - name: Import Movies
+    tool: import_movies
+    params:
+      blob_paths: "${inputs.dataset.movies_path}"
+      psize_A: "${inputs.dataset.pixel_size}"
+      accel_kv: "${inputs.dataset.voltage}"
+      cs_mm: "${inputs.dataset.spherical_aberration}"
+      total_dose_e_per_A2: "${inputs.dataset.total_dose}"
+    outputs:
+      - movies
+
+  - name: Patch Motion Correction
+    tool: patch_motion_correction
+    inputs:
+      movies: "Import Movies.movies"
+    outputs:
+      - micrographs
+
+  - name: Patch CTF Estimation
+    tool: patch_ctf_estimation
+    inputs:
+      exposures: "Patch Motion Correction.micrographs"
+    outputs:
+      - micrographs
+
+  - name: Blob Picker
+    tool: blob_picker
+    inputs:
+      micrographs: "Patch CTF Estimation.micrographs"
+    params:
+      diameter: "${inputs.gpcr.min_particle_diameter}"
+      diameter_max: "${inputs.gpcr.max_particle_diameter}"
+    outputs:
+      - particles
+
+  - name: Extract Particles
+    tool: extract_micrographs
+    inputs:
+      particles: "Blob Picker.particles"
+      micrographs: "Patch CTF Estimation.micrographs"
+    params:
+      box_size_pix: "${inputs.gpcr.box_size}"
+    outputs:
+      - particles
+
+  - name: 2D Classification
+    tool: class_2d
+    inputs:
+      particles: "Extract Particles.particles"
+    params:
+      class2D_K: "${inputs.gpcr.num_2d_classes}"
+    outputs:
+      - particles
+      - class_averages
+
+  - name: Select 2D Classes
+    tool: select_2d
+    inputs:
+      particles: "2D Classification.particles"
+      templates: "2D Classification.class_averages"
+    outputs:
+      - particles
+
+  - name: Ab-initio Reconstruction
+    tool: homo_abinit
+    inputs:
+      particles: "Select 2D Classes.particles"
+    params:
+      abinit_K: "${inputs.gpcr.num_abinit_classes}"
+      abinit_symmetry: "${config.symmetry}"
+    outputs:
+      - volume
+      - particles
+
+  - name: Heterogeneous Refinement
+    tool: hetero_refine
+    inputs:
+      particles: "Ab-initio Reconstruction.particles"
+      volume: "Ab-initio Reconstruction.volume"
+    params:
+      hetero_num_classes: 4
+    outputs:
+      - volume
+      - particles
+
+  - name: Homogeneous Refinement
+    tool: homo_refine
+    inputs:
+      particles: "Heterogeneous Refinement.particles"
+      volume: "Heterogeneous Refinement.volume"
+    params:
+      refine_symmetry: "${config.symmetry}"
+    outputs:
+      - volume
+      - particles
+
+  - name: Non-uniform Refinement
+    tool: nonuniform_refine
+    inputs:
+      particles: "Homogeneous Refinement.particles"
+      volume: "Homogeneous Refinement.volume"
+    params:
+      refine_symmetry: "${config.symmetry}"
+    outputs:
+      - volume
+      - particles
+      - resolution
+
+quality_gates:
+  - after: Patch CTF Estimation
+    check: ctf_fit_mean < 5.0
+    action: warn
+  
+  - after: 2D Classification
+    check: num_particles > 10000
+    action: proceed
+  
+  - after: Non-uniform Refinement
+    check: resolution < resolution_target
+    action: success
+
+outputs:
+  final_map: "Non-uniform Refinement.volume"
+  resolution: "Non-uniform Refinement.resolution"
+  particles: "Non-uniform Refinement.particles"
