@@ -6,7 +6,7 @@ CryoEMAgent is an intelligent orchestration system that autonomously determines 
 
 ---
 
-## 🎯 What This Agent Does
+## What This Agent Does
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -47,7 +47,7 @@ CryoEMAgent provides an **AI brain** that:
 
 ---
 
-## 📖 Research Foundation
+## Research Foundation
 
 This agent was designed by studying two key sources:
 
@@ -125,7 +125,7 @@ The following research artifacts document our analysis:
 | `cryosparc_tools_analysis.md` | Analysis of the Python API structure |
 
 
-## 🏗️ Architecture
+## Architecture
 
 ### Memory-Planning-Action Framework
 
@@ -163,7 +163,7 @@ class CryoEMAgent:
 
 ---
 
-## 📋 GPCR Processing Pipeline
+## GPCR Processing Pipeline
 
 The agent executes an **11-step workflow** optimized for GPCR membrane proteins:
 
@@ -189,7 +189,7 @@ Step 11: Non-uniform Refine     → 52,000 particles at 3.2Å ✓
 
 ---
 
-## 🚀 Installation
+## Installation
 
 ```bash
 # Clone the repository
@@ -210,7 +210,7 @@ cryoem-agent version
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 Create a `.env` file or set environment variables:
 
@@ -235,7 +235,7 @@ export OPENAI_API_KEY="sk-..."
 
 ---
 
-## 💻 Usage
+## Usage
 
 ### Command Line
 
@@ -295,7 +295,7 @@ This demonstrates the complete workflow using:
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 CryoEMAgent/
@@ -341,7 +341,7 @@ CryoEMAgent/
 
 ---
 
-## 🧠 How the LLM Planning Works
+## How the LLM Planning Works
 
 The agent uses GPT-4 with a specialized system prompt:
 
@@ -380,7 +380,7 @@ Output JSON with action_type, parameters, and reasoning.
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ```bash
 # Run all tests
@@ -395,7 +395,7 @@ pytest tests/ --cov=cryoemagent
 
 ---
 
-## 📊 Demo Results
+## Demo Results
 
 Running `python examples/run_mock_demo.py` produces:
 
@@ -412,7 +412,7 @@ Running `python examples/run_mock_demo.py` produces:
 
 ---
 
-## 🔗 Dependencies
+## Dependencies
 
 | Package | Purpose |
 |---------|---------|
@@ -424,7 +424,7 @@ Running `python examples/run_mock_demo.py` produces:
 
 ---
 
-## 📚 References
+## References
 
 - [CryoSPARC Paper](https://www.nature.com/articles/nmeth.4169) - Punjani et al., 2017
 - [SpatialAgent Paper](https://arxiv.org/abs/2401.01724) - Memory-Planning-Action architecture
@@ -432,13 +432,13 @@ Running `python examples/run_mock_demo.py` produces:
 
 ---
 
-## 📄 License
+## License
 
 MIT License - See LICENSE file for details.
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
