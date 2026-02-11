@@ -438,14 +438,6 @@ MIT License - See LICENSE file for details.
 
 ---
 
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests: `pytest tests/ -v`
-5. Submit a pull request
-
 ---
 
 **Built for autonomous GPCR structure determination** 🧬
