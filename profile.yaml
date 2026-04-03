@@ -1,0 +1,79 @@
+# CryoEMAgent profile.yaml
+# This file must match the MCP server's config format exactly —
+# the orchestrator reads all keys directly from this dict.
+
+cryosparc:
+  base_url: "http://localhost:39000"
+  license_id: "e1674060-08f7-11f1-aee8-9f3875918fa6"
+  email: "meiyuan@andrew.cmu.edu"
+  password: "MeiYuan123"
+  lane: "default"
+  project_uid: "P3"
+  workspace_w1_title: "W1_blob_tools"
+  workspace_w2_title: "W2_template_tools"
+  # Optional: pin exact workspace UIDs if you want to reuse existing ones
+  # workspace_w1_uid: "W11"
+  # workspace_w2_uid: "W10"
+
+data:
+  # Path to raw movie files (.mrc or .tif)
+  movie_blob_path: "/shared/scratch/0/home/v_yaswanth_devavarapu/empiar/10288/*.tif"
+  gainref_path: ""          # leave empty if no gain reference
+  psize_A: 1.0              # pixel size in Angstroms
+  accel_kv: 300             # acceleration voltage in kV
+  cs_mm: 2.7                # spherical aberration in mm
+  total_dose_e_per_A2: 60.0 # total dose in e-/Å²
+
+compute:
+  import_gpus: []           # CPU import
+  motion_gpus: [0]
+  ctf_gpus: [0]
+  picker_gpus: [0]
+  extract_gpus: [0]
+  class2d_gpus: [0]
+  abinit_gpus: [0]
+  homo_gpus: [0]
+  nonuniform_gpus: [0]
+
+workflow:
+  auto_interactive: false
+  picker_params:
+    diameter: 150           # particle diameter in Angstroms
+  job_types:
+    import_movies: "import_movies"
+    patch_motion: "patch_motion_correction_multi"
+    patch_ctf: "patch_ctf_estimation_multi"
+    curate: "curate_exposures_v2"
+    blob_picker: "blob_picker_gpu"
+    template_picker: "template_picker_gpu"
+    inspect_picks: "inspect_picks_v2"
+    extract: "extract_micrographs_multi"
+    class2d: "class_2D_new"
+    select2d: "select_2D"
+    abinit: "homo_abinit"
+    homo_refine: "homo_refine_new"
+    nonuniform_refine: "nonuniform_refine_new"
+  outputs:
+    import_movies: "imported_movies"
+    motion_micrographs: "micrographs"
+    ctf_exposures: "exposures"
+    curate_accepted: "exposures_accepted"
+    inspect_particles: "particles"
+    inspect_micrographs: "micrographs"
+    extract_particles: "particles"
+    class2d_templates: "class_averages"
+    class2d_particles: "particles"
+    select2d_particles_selected: "particles_selected"
+    select2d_templates_selected: "templates_selected"
+    abinit_particles_class_0: "particles_class_0"
+    abinit_particles_unused: "particles_unused"
+    abinit_volume_class_0: "volume_class_0"
+
+agent:
+  mcp_server_src_path: "C:/Users/yaswa/OneDrive/Documents/min-xu/mei-work/Cryosparc_mcp_Server/src"
+  root_dir: "C:/Users/yaswa/OneDrive/Documents/min-xu/mei-work/CryoEMAgent/runs"
+  max_agent_iterations: 200
+
+llm:
+  provider: "openai"
+  model: "gpt-4o"

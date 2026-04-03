@@ -199,14 +199,6 @@ class EpisodicMemory:
             "data": data or {},
         })
 
-    def add_decision(self, decision: str, reasoning: str):
-        """Record a decision with reasoning (legacy compatibility signature)."""
-        self.decisions.append({
-            "timestamp": datetime.now().isoformat(),
-            "decision": decision,
-            "reasoning": reasoning,
-        })
-
     def add_error(self, error: str, context: Optional[Dict[str, Any]] = None):
         """Record an error."""
         self.errors.append({
@@ -236,7 +228,7 @@ class EpisodicMemory:
             # Never crash the loop over memory operations.
             pass
 
-    def add_decision(  # type: ignore[override]  # noqa: F811
+    def add_decision(
         self,
         step: str,
         decision: str,
