@@ -9,7 +9,6 @@ from cryoemagent.config import LLMConfig
 from cryoemagent.core.memory import Memory
 from cryoemagent.core.planner import Planner
 from cryoemagent.core.quality_critics import QualityCriticChain
-from cryoemagent.orchestrator_client import OrchestratorClient
 
 logger = logging.getLogger(__name__)
 
@@ -82,21 +81,35 @@ class CryoEMAgent:
         self,
         orchestrator_config: Dict[str, Any],
         agent_config=None,
+        ssh_config: Optional[Dict[str, Any]] = None,
     ):
         """
         Parameters
         ----------
         orchestrator_config : dict
-            Full MCP server config dict (loaded from profile YAML).  Must contain
-            keys: cryosparc, compute, workflow, data.
+            Full MCP server config dict (loaded from profile YAML).
         agent_config : AgentConfig, optional
-            Agent-specific config (LLM provider, paths, etc.).  If None, uses
-            defaults which picks up environment variables.
+            Agent-specific config (LLM provider, paths, etc.).
+        ssh_config : dict, optional
+            If provided, use MCP-over-SSH (remote mode).
+            Must contain "command" (str) and "args" (list of str).
+            If None, use local Python import mode (OrchestratorClient).
         """
-        self.orch_client = OrchestratorClient(
-            orchestrator_config,
-            mcp_src_path=agent_config.mcp_server_src_path if agent_config else None,
-        )
+        if ssh_config is not None:
+            # Remote mode: MCP over SSH
+            from cryoemagent.mcp_client import MCPOrchestratorClient
+            self.orch_client = MCPOrchestratorClient(ssh_config, orchestrator_config)
+            self._remote_mode = True
+            logger.info("Agent running in REMOTE mode (MCP over SSH)")
+        else:
+            # Local mode: direct Python import
+            from cryoemagent.orchestrator_client import OrchestratorClient
+            self.orch_client = OrchestratorClient(
+                orchestrator_config,
+                mcp_src_path=agent_config.mcp_server_src_path if agent_config else None,
+            )
+            self._remote_mode = False
+            logger.info("Agent running in LOCAL mode (Python import)")
 
         llm_config = agent_config.llm if agent_config is not None and hasattr(agent_config, "llm") else LLMConfig()
         self.planner = Planner(llm_config)
@@ -339,18 +352,23 @@ class CryoEMAgent:
             # Quality assessment
             # ------------------------------------------------------------------
             snap = None
-            try:
-                cs_client = self.orch_client.get_cs_client()
-                snap = self.quality_chain.assess_step(
-                    step_name=state.current_step,
-                    cs_client=cs_client,
-                    project_uid=self.project_uid,
-                    jobs_dict=state.jobs,
-                )
-            except Exception as exc:
-                logger.warning(
-                    "Quality assessment raised unexpectedly: %s", exc, exc_info=True
-                )
+            cs_client = self.orch_client.get_cs_client()
+            if cs_client is not None:
+                # Local mode: run quality critics via direct CryoSPARC API
+                try:
+                    snap = self.quality_chain.assess_step(
+                        step_name=state.current_step,
+                        cs_client=cs_client,
+                        project_uid=self.project_uid,
+                        jobs_dict=state.jobs,
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "Quality assessment raised unexpectedly: %s", exc, exc_info=True
+                    )
+            else:
+                # Remote mode: quality critics unavailable, LLM decides from state alone
+                logger.debug("Quality critics skipped (remote MCP mode)")
 
             if snap is not None:
                 self.memory.episodic.add_quality_snapshot(snap)
@@ -366,6 +384,9 @@ class CryoEMAgent:
                 f"status={state.status} "
                 f"jobs_done={list(state.jobs.keys())}"
             )
+            # In remote mode, include MCP operator instruction for richer context
+            if self._remote_mode and hasattr(state, "operator_instruction") and state.operator_instruction:
+                state_summary += f"\noperator_context={state.operator_instruction}"
             quality_ctx = self.memory.episodic.get_quality_context()
             dec_history = _format_decision_log(self.memory.episodic.decision_log[-5:])
 

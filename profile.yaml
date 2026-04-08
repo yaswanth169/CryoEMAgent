@@ -70,10 +70,30 @@ workflow:
     abinit_volume_class_0: "volume_class_0"
 
 agent:
-  mcp_server_src_path: "C:/Users/yaswa/OneDrive/Documents/min-xu/mei-work/Cryosparc_mcp_Server/src"
-  root_dir: "C:/Users/yaswa/OneDrive/Documents/min-xu/mei-work/CryoEMAgent/runs"
+  # For remote mode (MCP over SSH): leave mcp_server_src_path empty
+  # For local mode (on-server): set the path to Cryosparc_mcp_Server/src
+  mcp_server_src_path: ""
+  root_dir: ""
   max_agent_iterations: 200
 
 llm:
   provider: "openai"
   model: "gpt-4o"
+
+# SSH connection to the GPU server running CryoSPARC + MCP server.
+# This is the same format as Claude Desktop / Cursor mcpServers config.
+ssh:
+  command: "ssh"
+  args:
+    - "-o"
+    - "ServerAliveInterval=60"
+    - "-T"
+    - "-J"
+    - "v_yaswanth_devavarapu@xulab-login0.lan.cmu.edu:20022"
+    - "-p"
+    - "20022"
+    - "v_yaswanth_devavarapu@10.0.1.2"
+    - "/bin/sh"
+    - "-c"
+    - "export CRYOSPARC_EMAIL='meiyuan@andrew.cmu.edu' && export CRYOSPARC_PASSWORD='MeiYuan123' && cd /mnt/data1/lv0/scratch/home/v_yaswanth_devavarapu/Cryosparc_mcp_Server && exec python3 -u run_server.py --config config/profile.yaml"
+  timeout: 600  # seconds per MCP tool call (10 min for long GPU jobs)
