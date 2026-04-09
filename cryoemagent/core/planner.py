@@ -14,6 +14,109 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# Formal CryoSPARC tool definitions (shown to LLM in system prompt)
+# ---------------------------------------------------------------------------
+
+CRYOSPARC_TOOLS = [
+    {
+        "name": "run_import_movies",
+        "description": "Import raw cryo-EM movie files (.tif/.mrc) into CryoSPARC workspace. Reads pixel size, voltage, spherical aberration from profile.",
+        "when_to_use": "Always first. Required before any other processing.",
+        "outputs": "imported_movies dataset"
+    },
+    {
+        "name": "run_patch_motion_correction",
+        "description": "Apply patch-based motion correction to raw movies. Aligns all frames per movie to remove beam-induced motion blur.",
+        "when_to_use": "After import_movies. Critical for high-resolution GPCR data.",
+        "outputs": "micrographs dataset, motion_corrected_movies"
+    },
+    {
+        "name": "run_patch_ctf_estimation",
+        "description": "Estimate the Contrast Transfer Function (CTF) for each micrograph. Determines defocus, astigmatism, and fit resolution.",
+        "when_to_use": "After motion correction. Required for accurate particle alignment.",
+        "outputs": "exposures_ctf dataset with fit_res, df1, df2 per micrograph"
+    },
+    {
+        "name": "curate_exposures",
+        "description": "[CHECKPOINT] Human reviews CTF quality. Exclude micrographs with CTF fit > 5 Å, excessive ice, or contamination.",
+        "when_to_use": "After patch_ctf. VLM can auto-evaluate if confidence >= 85%.",
+        "outputs": "curated exposures subset"
+    },
+    {
+        "name": "run_blob_picker",
+        "description": "Automatically pick particle candidates using a Laplacian-of-Gaussian blob detector. No template required.",
+        "when_to_use": "After curation. First picking pass for initial 2D references.",
+        "outputs": "picks dataset with NCC scores, ~50-200 particles/micrograph"
+    },
+    {
+        "name": "inspect_blob_picks",
+        "description": "[CHECKPOINT] Human/VLM reviews particle picks. Adjust NCC thresholds to remove false positives and missed particles.",
+        "when_to_use": "After blob_picker. VLM can auto-adjust NCC thresholds.",
+        "outputs": "filtered picks with adjusted thresholds"
+    },
+    {
+        "name": "extract_particles",
+        "description": "Extract particle image stacks from micrographs using pick coordinates. Box size should be 256px for GPCR.",
+        "when_to_use": "After inspect picks. Prepares particles for classification.",
+        "outputs": "particle_stacks dataset"
+    },
+    {
+        "name": "run_2d_classification",
+        "description": "Classify particles into 2D class averages. Reveals particle heterogeneity and quality. Run 50 classes for GPCR.",
+        "when_to_use": "After extraction. Generates templates and enables quality assessment.",
+        "outputs": "class_averages, particles_classified"
+    },
+    {
+        "name": "select_2d_classes",
+        "description": "[CHECKPOINT] Human/VLM selects high-quality 2D classes (clear secondary structure, correct size) and discards junk.",
+        "when_to_use": "After 2D classification. VLM uses vision to identify good classes.",
+        "outputs": "selected_particles subset"
+    },
+    {
+        "name": "run_abinit_reconstruction",
+        "description": "Generate an initial 3D reconstruction ab initio (no reference required). Uses heterogeneous reconstruction to find multiple conformations.",
+        "when_to_use": "After 2D selection with >= 5000 particles. Generates first 3D model.",
+        "outputs": "volume maps, particle_assignments"
+    },
+    {
+        "name": "run_homogeneous_refinement",
+        "description": "Refine the 3D reconstruction assuming a single homogeneous conformation. Improves resolution iteratively.",
+        "when_to_use": "After ab-initio. Targets < 4 Å resolution for GPCR.",
+        "outputs": "refined_volume, FSC_curve, estimated_resolution_A"
+    },
+    {
+        "name": "run_template_picker",
+        "description": "Pick particles using 2D class averages as templates. More accurate than blob picking.",
+        "when_to_use": "W2 pipeline. After W1 generates 2D class templates.",
+        "outputs": "template_picks with higher specificity"
+    },
+    {
+        "name": "run_nonuniform_refinement",
+        "description": "Final high-resolution refinement accounting for local conformational heterogeneity. Best for flexible GPCRs.",
+        "when_to_use": "Final step. Achieves highest resolution (target <= 3.5 Å).",
+        "outputs": "final_volume, gold_standard_FSC, final_resolution_A"
+    },
+    {
+        "name": "assess_quality",
+        "description": "Evaluate quality metrics from a completed step and decide whether to continue, adjust parameters, or escalate.",
+        "when_to_use": "After any computational step before proceeding.",
+        "outputs": "quality_verdict: PASS/WARN/FAIL"
+    },
+    {
+        "name": "escalate_to_human",
+        "description": "Stop the pipeline and request human expert intervention. Use only when quality is critically below threshold.",
+        "when_to_use": "Resolution > 8 Å AND particles < 1000, OR same step failed 3+ times.",
+        "outputs": "pipeline_paused with explanation"
+    },
+]
+
+TOOLS_SUMMARY = "\n".join(
+    f"  [{i+1}] {t['name']}: {t['description'][:80]}"
+    for i, t in enumerate(CRYOSPARC_TOOLS)
+)
+
+
+# ---------------------------------------------------------------------------
 # Backwards-compatible action / plan types
 # ---------------------------------------------------------------------------
 
@@ -66,7 +169,18 @@ class Plan:
 # System prompt
 # ---------------------------------------------------------------------------
 
-SYSTEM_PROMPT = """You are an expert cryo-EM data processing agent specialized in GPCR structure determination.
+SYSTEM_PROMPT = f"""You are an expert cryo-EM data processing agent specialized in GPCR structure determination.
+
+AVAILABLE TOOLS (CryoSPARC operations you can invoke):
+{TOOLS_SUMMARY}
+
+AGENTIC FRAMEWORK:
+You operate using a Planning → Memory → Action loop:
+  Planning:  Reason about current state, quality metrics, and which tool to invoke next
+  Memory:    You receive episodic context (jobs completed, quality timeline, prior decisions)
+  Action:    Select a tool and return your decision with full reasoning chain
+
+
 
 CONTEXT:
 GPCRs (G-protein-coupled receptors) are membrane proteins of ~60 kDa that are challenging
@@ -98,29 +212,26 @@ At each step, you receive:
 2. Quality context (recent quality snapshots with metrics)
 3. Decision history (recent decisions and their outcomes)
 
-You must respond with a JSON object containing your decision. The decision must be one of:
-- "CONTINUE": proceed with the next pipeline step as planned
-- "ADJUST": proceed but flag that parameter adjustment is recommended
-- "ESCALATE": stop and escalate to human (only for critical, unrecoverable issues)
-
-OUTPUT FORMAT (strictly valid JSON):
-{
+RESPONSE FORMAT — You must respond with strictly valid JSON:
+{{
+    "observation": "What you observe from the current state and quality metrics (1-2 sentences)",
+    "thought": "Your chain-of-thought reasoning about what should happen next (2-3 sentences)",
+    "tool_selected": "name of the tool from AVAILABLE TOOLS that should execute next",
     "decision": "CONTINUE" | "ADJUST" | "ESCALATE",
-    "reasoning": "Chain-of-thought explanation of your decision (2-4 sentences)",
+    "reasoning": "Full explanation combining observation + thought + decision rationale (3-5 sentences)",
     "recommendation": "Specific actionable recommendation for the operator",
-    "parameter_adjustments": {
+    "parameter_adjustments": {{
         "key": "value"
-    }
-}
+    }}
+}}
 
-IMPORTANT RULES:
-- Default to CONTINUE unless you have specific evidence of a critical problem
-- ESCALATE only if resolution is >8 Å and particle count is <1000, or if the same step
-  has failed 3+ times consecutively
+DECISION RULES:
+- Default to CONTINUE + next logical tool unless you have specific evidence of a problem
+- ESCALATE only if: resolution > 8 Å AND particles < 1000, OR same step failed 3+ times
 - ADJUST when quality metrics are marginal but not critically bad
-- Never invent data — base decisions only on provided quality context
-- parameter_adjustments can be empty {} if no adjustment is needed
-- Keep reasoning concise and evidence-based
+- Never invent data — base decisions ONLY on provided quality context
+- tool_selected should be the next tool from the AVAILABLE TOOLS list
+- Keep reasoning evidence-based and cite specific metrics when available
 """
 
 
@@ -517,14 +628,46 @@ class Planner:
                 text += block.text
         return self._parse_response(text)
 
+    def react_decide(
+        self,
+        state_summary: str,
+        quality_context: str,
+        decision_history: str,
+    ) -> Dict[str, Any]:
+        """
+        ReAct-pattern decision: Observe → Think → Act.
+
+        Returns the same dict as decide() but with richer reasoning fields.
+        """
+        user_msg = (
+            f"=== OBSERVE: Current Run State ===\n{state_summary}\n\n"
+            f"=== OBSERVE: Quality Context ===\n{quality_context}\n\n"
+            f"=== MEMORY: Recent Decision Log ===\n{decision_history}\n\n"
+            "Apply the ReAct framework: Observe the current state → Think about "
+            "what it means for GPCR structure quality → Select the appropriate tool "
+            "and Act. Output strictly valid JSON."
+        )
+
+        try:
+            provider = (self.config.provider or "openai").lower()
+            if provider == "anthropic":
+                result = self._call_anthropic(user_msg)
+            else:
+                result = self._call_openai(user_msg)
+        except Exception as exc:
+            logger.warning("ReAct decision failed: %s", exc)
+            result = self._fallback_decision(str(exc))
+
+        return result
+
     def _parse_response(self, text: str) -> Dict[str, Any]:
         """
         Parse the LLM response text into a structured decision dict.
 
-        Attempts to extract a JSON object from the response.  Falls back to
-        CONTINUE on any parse failure.
+        Handles both the new ReAct format (with observation/thought/tool_selected)
+        and the legacy format (decision/reasoning only).
+        Falls back to CONTINUE on any parse failure.
         """
-        # Try to extract a JSON block from the response
         json_match = re.search(r"\{[\s\S]*\}", text)
         if not json_match:
             logger.warning("No JSON found in LLM response, falling back to CONTINUE")
@@ -541,9 +684,19 @@ class Planner:
             logger.warning("Unknown decision '%s', defaulting to CONTINUE", decision)
             decision = "CONTINUE"
 
+        # Build full reasoning from ReAct fields if present
+        observation = str(data.get("observation", ""))
+        thought = str(data.get("thought", ""))
+        reasoning = str(data.get("reasoning", "No reasoning provided"))
+        if observation and thought and not reasoning.startswith("Observation"):
+            reasoning = f"Observation: {observation}\nThought: {thought}\nDecision: {reasoning}"
+
         return {
             "decision": decision,
-            "reasoning": str(data.get("reasoning", "No reasoning provided"))[:500],
+            "observation": observation[:300],
+            "thought": thought[:300],
+            "tool_selected": str(data.get("tool_selected", ""))[:80],
+            "reasoning": reasoning[:800],
             "recommendation": str(data.get("recommendation", ""))[:300],
             "parameter_adjustments": data.get("parameter_adjustments", {}),
         }
@@ -552,6 +705,9 @@ class Planner:
         """Return a safe CONTINUE decision when anything fails."""
         return {
             "decision": "CONTINUE",
+            "observation": "LLM unavailable.",
+            "thought": "Defaulting to CONTINUE as safe fallback.",
+            "tool_selected": "",
             "reasoning": f"LLM unavailable or response unparseable ({reason}). Proceeding with default CONTINUE.",
             "recommendation": "Review logs for LLM errors.",
             "parameter_adjustments": {},

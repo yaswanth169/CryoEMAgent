@@ -1,8 +1,11 @@
 """Main CryoEMAgent - Autonomous cryo-EM structure determination."""
 
+import json
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from cryoemagent.config import LLMConfig
@@ -11,6 +14,13 @@ from cryoemagent.core.planner import Planner
 from cryoemagent.core.quality_critics import QualityCriticChain
 
 logger = logging.getLogger(__name__)
+
+
+def _get_reasoning_log_path(run_id: str, root_dir: str = "runs") -> Path:
+    """Return path for the JSON reasoning log file for a run."""
+    log_dir = Path(root_dir) / "reasoning_logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    return log_dir / f"reasoning_{run_id[:8]}.json"
 
 
 # ---------------------------------------------------------------------------
@@ -120,9 +130,16 @@ class CryoEMAgent:
         self._max_iterations: int = (
             agent_config.max_agent_iterations if agent_config else 200
         )
+        self._root_dir: str = (
+            agent_config.root_dir if agent_config and agent_config.root_dir else "runs"
+        )
 
         # Storage for the last checkpoint instructions (useful for CLI display)
         self._last_checkpoint_instructions: str = ""
+
+        # Reasoning log (written to JSON file each iteration)
+        self._reasoning_entries: List[Dict[str, Any]] = []
+        self._reasoning_log_path: Optional[Path] = None
 
         logger.info(
             "CryoEMAgent initialised. project_uid=%s max_iter=%d",
@@ -260,6 +277,12 @@ class CryoEMAgent:
         max_iter = self._max_iterations
         run_id = initial_state.run_id
 
+        # Set up reasoning log file for this run
+        self._reasoning_log_path = _get_reasoning_log_path(run_id, self._root_dir)
+        self._reasoning_entries = []
+        self._append_reasoning_log({"event": "run_started", "run_id": run_id,
+                                    "timestamp": datetime.now().isoformat()})
+
         while iteration < max_iter:
             iteration += 1
 
@@ -390,7 +413,8 @@ class CryoEMAgent:
             quality_ctx = self.memory.episodic.get_quality_context()
             dec_history = _format_decision_log(self.memory.episodic.decision_log[-5:])
 
-            decision = self.planner.decide(state_summary, quality_ctx, dec_history)
+            # Use ReAct-style decision for richer reasoning
+            decision = self.planner.react_decide(state_summary, quality_ctx, dec_history)
 
             quality_evidence = snap.summary() if snap is not None else None
             self.memory.episodic.add_decision(
@@ -400,11 +424,42 @@ class CryoEMAgent:
                 quality_evidence=quality_evidence,
             )
 
+            # Always show LLM reasoning prominently (not just DEBUG)
             logger.info(
-                "LLM decision: %s — %s",
+                "\n╔═══ LLM REASONING [Step: %s] ═══\n"
+                "║ Observation: %s\n"
+                "║ Thought:     %s\n"
+                "║ Tool:        %s\n"
+                "║ Decision:    %s\n"
+                "║ Rationale:   %s\n"
+                "╚══════════════════════════════",
+                state.current_step,
+                decision.get("observation", "")[:120],
+                decision.get("thought", "")[:120],
+                decision.get("tool_selected", ""),
                 decision["decision"],
-                decision["reasoning"][:100],
+                decision["reasoning"][:200],
             )
+
+            # Write to reasoning log file
+            log_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "iteration": iteration,
+                "step": state.current_step,
+                "stage": state.current_stage,
+                "state_summary": state_summary,
+                "quality_context": quality_ctx[:500],
+                "llm_decision": {
+                    "observation": decision.get("observation", ""),
+                    "thought": decision.get("thought", ""),
+                    "tool_selected": decision.get("tool_selected", ""),
+                    "decision": decision["decision"],
+                    "reasoning": decision["reasoning"],
+                    "recommendation": decision.get("recommendation", ""),
+                    "parameter_adjustments": decision.get("parameter_adjustments", {}),
+                },
+            }
+            self._append_reasoning_log(log_entry)
 
             # Escalation: stop and return
             if decision["decision"] == "ESCALATE":
@@ -459,3 +514,29 @@ class CryoEMAgent:
             quality_timeline=list(self.memory.episodic.quality_timeline),
             decision_log=list(self.memory.episodic.decision_log),
         )
+
+    # ------------------------------------------------------------------
+    # Reasoning log helpers
+    # ------------------------------------------------------------------
+
+    def _append_reasoning_log(self, entry: Dict[str, Any]) -> None:
+        """Append an entry to the in-memory reasoning log and flush to JSON file."""
+        self._reasoning_entries.append(entry)
+        if self._reasoning_log_path is None:
+            return
+        try:
+            payload = {
+                "run_id": entry.get("run_id", ""),
+                "log_path": str(self._reasoning_log_path),
+                "total_entries": len(self._reasoning_entries),
+                "entries": self._reasoning_entries,
+            }
+            with open(self._reasoning_log_path, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2)
+        except Exception as exc:
+            logger.debug("Could not write reasoning log: %s", exc)
+
+    @property
+    def reasoning_log_path(self) -> Optional[str]:
+        """Return path to the current reasoning log file, or None."""
+        return str(self._reasoning_log_path) if self._reasoning_log_path else None
