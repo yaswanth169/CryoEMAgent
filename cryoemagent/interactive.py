@@ -340,6 +340,26 @@ class InteractiveSession:
 
     # ── core auto-run loop ───────────────────────────────────────────────
 
+    def _sync_completed_steps(self):
+        """
+        Sync _completed_steps to match actual server-side pipeline progress.
+
+        After resume_checkpoint(), the server may have run several steps internally
+        (e.g. blob_pick, extract_blob, class2d_blob) before stopping at inspect_blob.
+        We never called step() for those, so our local list is stale.
+        Walk PIPELINE_STEPS up to (but not including) current_step and fill in gaps.
+        """
+        if self._state is None:
+            return
+        current = self._state.current_step
+        if not current:
+            return
+        for s in PIPELINE_STEPS:
+            if s["key"] == current:
+                break  # stop before the current (not-yet-done) step
+            if s["key"] not in self._completed_steps:
+                self._completed_steps.append(s["key"])
+
     def _run_until_checkpoint(self):
         """
         Core engine: step() in a loop, narrating each completion,
@@ -350,6 +370,9 @@ class InteractiveSession:
         while True:
             if self._state is None:
                 break
+
+            # Sync completed steps with server state (catches steps run during resume)
+            self._sync_completed_steps()
 
             # Reached a checkpoint — stop and wait for human
             if self._state.checkpoint_required:
@@ -519,6 +542,9 @@ class InteractiveSession:
         ):
             self._state = self.orch_client.resume_checkpoint(self._state)
 
+        # Sync completed steps — server may have run intermediate steps during resume
+        self._sync_completed_steps()
+
         step = self._state.current_step or "next step"
         self.console.print(f"\n  [green]Checkpoint cleared![/green] Resuming from [cyan]{step}[/cyan]...\n")
 
@@ -680,7 +706,7 @@ class InteractiveSession:
         for s in PIPELINE_STEPS:
             if s["key"] in self._completed_steps:
                 bar += "[bold green]█[/bold green]"
-            elif self._state and self._state.current_step and self._state.current_step.startswith(s["key"][:8]):
+            elif self._state and self._state.current_step == s["key"]:
                 bar += "[bold yellow]▶[/bold yellow]"
             else:
                 bar += "[dim]░[/dim]"
@@ -707,8 +733,7 @@ class InteractiveSession:
             done = s["key"] in self._completed_steps
             active = (
                 self._state is not None
-                and self._state.current_step is not None
-                and self._state.current_step.startswith(s["key"][:8])
+                and self._state.current_step == s["key"]
                 and not done
             )
             if done:
