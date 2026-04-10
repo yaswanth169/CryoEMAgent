@@ -51,13 +51,9 @@
 \lstdefinelanguage{json}{
   basicstyle   = \ttfamily\footnotesize,
   morestring   = [b]",
-  moredelim    = [s][\color{codeblue}\bfseries]{\{}{\}},
-  literate     = *{:}{{{\color{gray}:}}}{1}
-                  {,}{{{\color{gray},}}}{1}
-                  {\{}{{{\color{codeblue}\{}}}{1}
-                  {\}}{{{\color{codeblue}\}}}}{1}
-                  {[}{{{\color{codeblue}[}}}{1}
-                  {]}{{{\color{codeblue}]}}}{1},
+  stringstyle  = \color{codered},
+  literate     = *{:}{{{\color{gray}{:}}}}{1}
+                  {,}{{{\color{gray}{,}}}}{1},
 }
 
 \lstdefinelanguage{yaml}{
@@ -200,7 +196,7 @@
 
 % ── Helpers ──────────────────────────────────────────────────────────────────
 \newcommand{\Ang}{\,\text{\AA}}
-\newcommand{\umu}{$\mu$m}
+\newcommand{\umu}{\ensuremath{\mu}m}
 \newcommand{\cpmark}{\textbf{[CP]}}  % checkpoint marker in tables/text
 
 % ════════════════════════════════════════════════════════════════════════════
@@ -715,7 +711,7 @@ Two memory systems run in parallel throughout the pipeline.
   \node[vlmblock=3.6cm, below=0.4cm of sem_hdr] (sem1)
     {GPCR domain knowledge\\(60\,kDa, 256\,px box, C1 symmetry)};
   \node[vlmblock=3.6cm, below=0.4cm of sem1] (sem2)
-    {Quality thresholds\\(CTF $<5$\,\AA, $\geq$50 particles/\textmu m)};
+    {Quality thresholds\\(CTF $<5$\,\AA, $\geq$50 particles/micrograph)};
   \node[vlmblock=3.6cm, below=0.4cm of sem2] (sem3)
     {15 CryoSPARC tool definitions};
 
@@ -838,8 +834,6 @@ Tier 2 --- Vision
   \draw[arrgrn] (autoq) -| node[lbl, pos=0.25]{Yes} (autoappr);
   \draw[arrblu] (autoq) -| node[lbl, pos=0.25]{No}  (humanreview);
   \draw[arrblu] (humanreview)--(userdone);
-  \draw[arrgrn] (autoappr.south) -- ++(0,-0.4)
-    -- ++(-3.0,0) -- ++(0,-10.5) node[]{};  % return arc removed for clarity
 
 \end{tikzpicture}
 \caption{VLM checkpoint evaluation flow. Tier 1 always runs (metrics
@@ -1304,8 +1298,9 @@ to the appropriate handler:
   \draw[arrgrn] (autoq) -| node[lbl, pos=0.25]{Yes} (autoappr);
   \draw[arrblu] (autoq) -| node[lbl, pos=0.25]{No}  (humrev);
   \draw[arrblu] (humrev)--(resum);
-  \draw[arrgrn] (autoappr.south) -- ++(0,-0.3) -- ++(-5.5,0) |- (loop.east);
-  \draw[arrgrn] (resum.south)    -- ++(0,-0.3) -- ++(-7.5,0) |- (loop.east);
+  % Return arrows: go left of main column then up to loop.west
+  \draw[arrgrn] (autoappr.west) -- ++(-3.2,0) |- (loop.west);
+  \draw[arrgrn] (resum.west)    -- ++(-5.8,0) |- (loop.west);
   \draw[arrblu] (ckptq) -| node[lbl, pos=0.2]{No} (doneq);
   \draw[arrblu] (doneq)   -- node[lbl]{Yes} (finish);
   \draw[arrblu] (doneq.west) -- ++(-0.6,0) |- (react.west)
