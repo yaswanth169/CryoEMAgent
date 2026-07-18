@@ -570,17 +570,6 @@ View in interactive mode: type `reasoning` at any prompt.
 
 EMPIAR-10288: CB1 cannabinoid receptor (GPCR class A), 300 kV, 1.05 Å/px, 20 movies (demo subset).
 
-### Citation
-
-```bibtex
-@article{cryoemagent2026,
-  title   = {CryoEMAgent: Autonomous AI Agent for GPCR Cryo-EM Structure Determination},
-  author  = {Devavarapu, Yashwanth and Ireddi, Rakshitha and Yuan, Mei and Zhao, Yizhou},
-  journal = {NeurIPS},
-  year    = {2026}
-}
-```
-
 ---
 
 ## References
