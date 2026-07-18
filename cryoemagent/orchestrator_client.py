@@ -193,15 +193,15 @@ class OrchestratorClient:
         self.run_store.save(updated)
         return updated
 
-    def resume_checkpoint(self, state):
+    def resume_checkpoint(self, state, suggested_params=None):
         """
-        Resume a paused checkpoint step.
-
-        Clears checkpoint flags, saves, and returns the updated state.
+        Resume a paused checkpoint step, optionally applying VLM-suggested params.
 
         Parameters
         ----------
         state : RunState
+        suggested_params : dict, optional
+            Parameter key/value pairs recommended by VLMCritic (e.g. ncc_threshold).
 
         Returns
         -------
@@ -209,17 +209,46 @@ class OrchestratorClient:
         """
         orch = self._make_orchestrator(state.config if state.config else None)
         try:
-            orch.resume_checkpoint(state)
+            orch.resume_checkpoint(state, suggested_params=suggested_params or {})
         except Exception as exc:
             logger.exception("resume_checkpoint raised for run %s", state.run_id)
             state.errors[f"resume_error_{state.current_step}"] = str(exc)
 
-        # Ensure checkpoint fields are cleared even on partial failure.
         state.checkpoint_required = False
         state.checkpoint_message = ""
         state.checkpoint_job_uid = ""
         self.run_store.save(state)
         return state
+
+    def fetch_checkpoint_image(self, state) -> Optional[bytes]:
+        """
+        Fetch a thumbnail/plot image relevant to the current checkpoint.
+
+        Interactive checkpoint jobs are in 'waiting' state and have no plots yet.
+        We instead fetch from the PRECEDING completed job whose output is being
+        reviewed at this checkpoint:
+          curate            → patch_ctf   (CTF power spectra)
+          inspect_blob      → blob_picker (micrograph + picks)
+          inspect_template  → template_picker
+        Falls back to the checkpoint job itself, then to None.
+        """
+        _PRECEDING: Dict[str, str] = {
+            "curate":           "patch_ctf",
+            "inspect_blob":     "blob_picker",
+            "inspect_template": "template_picker",
+        }
+        step = getattr(state, "current_step", "")
+        jobs = getattr(state, "jobs", {})
+        project_uid = self._config.get("cryosparc", {}).get("project_uid", "")
+
+        source_uid = jobs.get(_PRECEDING.get(step, ""), "") or getattr(state, "checkpoint_job_uid", "")
+        if not source_uid:
+            return None
+        try:
+            return self._adapter.fetch_job_thumbnail(project_uid, source_uid)
+        except Exception as exc:
+            logger.debug("fetch_checkpoint_image failed for %s: %s", source_uid, exc)
+            return None
 
     def write_report(self, state) -> Dict[str, str]:
         """

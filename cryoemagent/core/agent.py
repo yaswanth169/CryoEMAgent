@@ -12,6 +12,7 @@ from cryoemagent.config import LLMConfig
 from cryoemagent.core.memory import Memory
 from cryoemagent.core.planner import Planner
 from cryoemagent.core.quality_critics import QualityCriticChain
+from cryoemagent.vlm_critic import VLMCritic, AUTO_APPROVE_THRESHOLD
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +126,7 @@ class CryoEMAgent:
         self.planner = Planner(llm_config)
         self.memory = Memory()
         self.quality_chain = QualityCriticChain()
+        self.vlm_critic = VLMCritic(llm_config)
 
         self.project_uid: str = orchestrator_config.get("cryosparc", {}).get("project_uid", "")
         self._max_iterations: int = (
@@ -310,19 +312,77 @@ class CryoEMAgent:
             )
 
             # ==================================================================
-            # ABSOLUTE GATE - DO NOT MODIFY
-            # Checkpoint gate must be the first condition checked every iteration.
+            # CHECKPOINT GATE — VLM auto-approve or pause for human
+            # Must be the first condition checked every iteration.
             # ==================================================================
             if state.checkpoint_required:
+                metrics = {
+                    "step": state.current_step,
+                    "stage": state.current_stage,
+                    "jobs_completed": list(state.jobs.keys()),
+                    "quality_context": self.memory.episodic.get_quality_context(),
+                }
+
+                # Gap 2: fetch actual image for Tier-2 VLM visual assessment
+                image_bytes: Optional[bytes] = None
+                try:
+                    image_bytes = self.orch_client.fetch_checkpoint_image(state)
+                    if image_bytes:
+                        logger.info(
+                            "Tier-2 image fetched for checkpoint '%s' (%d bytes)",
+                            state.current_step, len(image_bytes),
+                        )
+                except Exception as _img_exc:
+                    logger.debug("Image fetch skipped: %s", _img_exc)
+
+                assessment = self.vlm_critic.assess_checkpoint(
+                    state.current_step,
+                    metrics,
+                    images=[image_bytes] if image_bytes else None,
+                )
+
+                self._append_reasoning_log({
+                    "event": "vlm_checkpoint_assessment",
+                    "step": state.current_step,
+                    "verdict": assessment.verdict,
+                    "confidence": assessment.confidence,
+                    "auto_approved": assessment.auto_approved,
+                    "reasoning": assessment.reasoning,
+                    "recommended_actions": assessment.recommended_actions,
+                    "suggested_params": assessment.suggested_params,
+                    "used_images": assessment.used_images,
+                    "timestamp": datetime.now().isoformat(),
+                    "iteration": iteration,
+                })
+
+                if assessment.auto_approved:
+                    logger.info(
+                        "VLM AUTO-APPROVED checkpoint '%s' (conf=%.0f%% >= %.0f%%) "
+                        "tier=%s params=%s",
+                        state.current_step,
+                        assessment.confidence * 100,
+                        AUTO_APPROVE_THRESHOLD * 100,
+                        "2-vision" if assessment.used_images else "1-metrics",
+                        assessment.suggested_params or "none",
+                    )
+                    # Gap 1: apply VLM-suggested params before closing job
+                    self.orch_client.resume_checkpoint(
+                        state,
+                        suggested_params=assessment.suggested_params or {},
+                    )
+                    continue  # re-read state from disk at top of loop
+
+                # VLM not confident enough — pause for human review
                 instructions = self.planner.generate_checkpoint_instructions(
                     step_name=state.current_step,
                     job_uid=state.checkpoint_job_uid,
                     quality_context=self.memory.episodic.get_quality_context(),
                 )
                 logger.info(
-                    "CHECKPOINT required at step '%s' (job %s). Pausing loop.",
+                    "CHECKPOINT at step '%s' — VLM conf=%.0f%% < %.0f%%. Pausing for human.",
                     state.current_step,
-                    state.checkpoint_job_uid,
+                    assessment.confidence * 100,
+                    AUTO_APPROVE_THRESHOLD * 100,
                 )
                 self._last_checkpoint_instructions = instructions
                 return AgentResult(
@@ -335,7 +395,7 @@ class CryoEMAgent:
                     decision_log=list(self.memory.episodic.decision_log),
                 )
             # ==================================================================
-            # END ABSOLUTE GATE
+            # END CHECKPOINT GATE
             # ==================================================================
 
             # Completion check

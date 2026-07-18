@@ -375,12 +375,65 @@ class MCPOrchestratorClient:
         )
         return new_state
 
-    def resume_checkpoint(self, state) -> RemoteState:
-        """Resume after a human checkpoint via MCP."""
-        result = self._mcp.call_tool("cs_resume_pipeline", {"run_id": state.run_id})
+    def resume_checkpoint(self, state, suggested_params=None) -> RemoteState:
+        """
+        Resume after a checkpoint via MCP, applying VLM-suggested params.
+
+        Parameters
+        ----------
+        suggested_params : dict, optional
+            VLMCritic-recommended parameter changes (e.g. {"ncc_threshold_min": 0.35}).
+            Forwarded to the server which applies them before closing the interactive job.
+        """
+        args: Dict[str, Any] = {"run_id": state.run_id}
+        if suggested_params:
+            args["suggested_params"] = suggested_params
+        result = self._mcp.call_tool("cs_resume_pipeline", args)
         new_state = RemoteState(result)
-        logger.info("Checkpoint resumed: step=%s status=%s", new_state.current_step, new_state.status)
+        logger.info(
+            "Checkpoint resumed: step=%s status=%s params_applied=%s",
+            new_state.current_step, new_state.status, bool(suggested_params),
+        )
         return new_state
+
+    def fetch_checkpoint_image(self, state) -> Optional[bytes]:
+        """
+        Fetch a thumbnail/plot from the preceding completed job relevant to
+        the current checkpoint step, via MCP.
+
+        Interactive checkpoint jobs have no plots (they're in 'waiting' state).
+        We fetch from the completed job whose output is being reviewed instead:
+          curate            → patch_ctf
+          inspect_blob      → blob_picker
+          inspect_template  → template_picker
+        Falls back to the checkpoint job itself, then to None.
+        """
+        _PRECEDING = {
+            "curate":           "patch_ctf",
+            "inspect_blob":     "blob_picker",
+            "inspect_template": "template_picker",
+        }
+        step = getattr(state, "current_step", "")
+        jobs = getattr(state, "jobs", {})
+        source_uid = (
+            jobs.get(_PRECEDING.get(step, ""), "")
+            or getattr(state, "checkpoint_job_uid", "")
+        )
+        if not source_uid:
+            return None
+        try:
+            result = self._mcp.call_tool("cs_fetch_job_thumbnail", {"job_uid": source_uid})
+            if result.get("ok") and result.get("image_b64"):
+                import base64
+                raw = base64.b64decode(result["image_b64"])
+                logger.debug(
+                    "Tier-2 thumbnail fetched from job %s for checkpoint '%s' (%d bytes)",
+                    source_uid, step, len(raw),
+                )
+                return raw
+        except Exception as exc:
+            logger.debug("fetch_checkpoint_image via MCP failed: %s", exc)
+        return None
 
     def write_report(self, state) -> Dict[str, str]:
         """Generate report on the remote server."""

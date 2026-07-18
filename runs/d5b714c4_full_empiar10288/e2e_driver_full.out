@@ -1,0 +1,65 @@
+Connection succeeded to CryoSPARC command_core at http://localhost:39002
+Connection succeeded to CryoSPARC command_vis at http://localhost:39003
+Connection succeeded to CryoSPARC command_rtp at http://localhost:39005
+[2026-06-05T05:23:12.088566+00:00] RUN STARTED run_id=d5b714c4-0b3f-42c2-8771-322fa8a048e3
+[2026-06-05T05:23:54.474853+00:00] STEP step=import_movies stage=w1 status=running jobs=1 last_uid=J239
+[2026-06-05T12:09:07.453802+00:00] STEP step=patch_motion stage=w1 status=running jobs=2 last_uid=J240
+[2026-06-05T19:31:27.909715+00:00] STEP step=patch_ctf stage=w1 status=running jobs=3 last_uid=J241
+[2026-06-05T19:32:05.227147+00:00] STEP step=curate stage=w1 status=running jobs=4 last_uid=J242
+[2026-06-05T19:54:29.960468+00:00] STEP step=blob_picker stage=w1 status=running jobs=5 last_uid=J243
+[2026-06-05T20:19:40.509847+00:00] STEP step=extract_blob stage=w1 status=running jobs=6 last_uid=J244
+[2026-06-05T20:33:40.380843+00:00] STEP step=class2d_blob stage=w1 status=running jobs=7 last_uid=J245
+[2026-06-05T20:33:46.218945+00:00] STEP step=select2d_blob stage=w1 status=running jobs=8 last_uid=J246
+[2026-06-05T20:42:24.503572+00:00] STEP step=abinit_blob stage=w1 status=running jobs=9 last_uid=J247
+[2026-06-05T20:51:53.143263+00:00] STEP step=homo_blob stage=w1 status=running jobs=10 last_uid=J248
+[2026-06-05T22:01:13.714476+00:00] STEP step=template_picker stage=w2 status=running jobs=11 last_uid=J249
+[2026-06-05T23:38:35.428952+00:00] STEP step=extract_template stage=w2 status=running jobs=12 last_uid=J250
+[2026-06-05T23:55:57.550523+00:00] STEP EXCEPTION at extract_template: Job P3-J251 did not complete (status failed)
+[2026-06-05T23:55:57.624618+00:00] TRACEBACK:
+Traceback (most recent call last):
+  File "/mnt/data1/lv0/scratch/home/v_yaswanth_devavarapu/Cryosparc_mcp_Server/run_pipeline_e2e.py", line 74, in main
+    state = orch.run_until_pause_or_done(state, single_step=True)
+  File "/mnt/data1/lv0/scratch/home/v_yaswanth_devavarapu/Cryosparc_mcp_Server/src/cryosparc_mcp_server/orchestrator.py", line 318, in run_until_pause_or_done
+    self.adapter.queue_and_wait(j, self.cs_cfg["lane"], self.comp["class2d_gpus"])
+  File "/mnt/data1/lv0/scratch/home/v_yaswanth_devavarapu/Cryosparc_mcp_Server/src/cryosparc_mcp_server/cryosparc_adapter.py", line 160, in queue_and_wait
+    job.wait_for_done(error_on_incomplete=True)
+  File "/shared/home/v_yaswanth_devavarapu/.local/lib/python3.10/site-packages/cryosparc/job.py", line 256, in wait_for_done
+    assert not error_on_incomplete or status == "completed", (
+AssertionError: Job P3-J251 did not complete (status failed)
+
+[2026-06-05T23:55:57.625636+00:00] DRIVER EXIT
+Connection succeeded to CryoSPARC command_core at http://localhost:39002
+Connection succeeded to CryoSPARC command_vis at http://localhost:39003
+Connection succeeded to CryoSPARC command_rtp at http://localhost:39005
+[2026-06-05T23:59:03.798337+00:00] RESUMING run_id=d5b714c4-0b3f-42c2-8771-322fa8a048e3 step=extract_template done_jobs=['import_movies', 'patch_motion', 'patch_ctf', 'curate', 'blob_picker', 'extract_blob', 'class2d_blob', 'select2d_blob', 'abinit_blob', 'homo_blob', 'template_picker', 'extract_template']
+[2026-06-06T00:50:24.036249+00:00] STEP step=class2d_template stage=w2 status=running jobs=13 last_uid=J252
+[2026-06-06T00:52:06.435132+00:00] STEP step=select2d_template stage=w2 status=running jobs=14 last_uid=J253
+[2026-06-06T01:03:35.476483+00:00] STEP step=abinit_template stage=w2 status=running jobs=15 last_uid=J254
+[2026-06-06T01:16:50.380166+00:00] STEP step=homo_template stage=w2 status=running jobs=16 last_uid=J255
+[2026-06-06T01:58:10.265277+00:00] STEP step=nonuniform_template stage=w2 status=running jobs=17 last_uid=J256
+[2026-06-06T02:02:23.342913+00:00] STEP step=ctf_refine stage=w2 status=running jobs=18 last_uid=J257
+Bayesian polishing skipped (best-effort): Job P3-J258 did not complete (status failed)
+[2026-06-06T02:03:21.039452+00:00] STEP step=done stage=w2 status=completed jobs=19 last_uid=
+[2026-06-06T02:03:21.040203+00:00] PIPELINE COMPLETED. total_jobs=19
+[2026-06-06T02:03:21.041451+00:00] FINAL JOBS: {
+  "import_movies": "J239",
+  "patch_motion": "J240",
+  "patch_ctf": "J241",
+  "curate": "J242",
+  "blob_picker": "J243",
+  "extract_blob": "J244",
+  "class2d_blob": "J245",
+  "select2d_blob": "J246",
+  "abinit_blob": "J247",
+  "homo_blob": "J248",
+  "template_picker": "J249",
+  "extract_template": "J250",
+  "class2d_template": "J252",
+  "select2d_template": "J253",
+  "abinit_template": "J254",
+  "homo_template": "J255",
+  "nonuniform_template": "J256",
+  "ctf_refine": "J257",
+  "polish_skipped": "skipped"
+}
+[2026-06-06T02:03:21.042692+00:00] DRIVER EXIT

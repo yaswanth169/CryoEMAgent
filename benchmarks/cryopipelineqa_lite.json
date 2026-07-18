@@ -1,0 +1,428 @@
+{
+  "name": "CryoPipelineQA-lite",
+  "version": "0.2",
+  "description": "A benchmark of cryo-EM single-particle-analysis processing DECISIONS, each grounded in real pipeline metrics. Tests whether an LLM reasons correctly about processing choices (not factual recall). Ground-truth answers reflect established SPA practice; several scenarios use real EMPIAR-10288 numbers from our runs. (v0.2: option positions randomized, seed=42, so the correct letter is not positionally biased.)",
+  "scoring": "single-best-answer multiple choice; accuracy over items",
+  "items": [
+    {
+      "id": "Q01",
+      "stage": "curate",
+      "scenario": "After patch-CTF, exposure curation reports median CTF fit resolution 8.5 A on 40% of micrographs; the rest fit to <4 A.",
+      "question": "What is the best action?",
+      "options": {
+        "A": "Reject everything and re-collect",
+        "B": "Reject the 40% with poor CTF fit and keep the rest",
+        "C": "Lower the defocus and re-estimate CTF only",
+        "D": "Accept all exposures; more data is always better"
+      },
+      "answer": "B",
+      "rationale": "Poor CTF fit (>~5-8 A) indicates thin-ice/drift/contamination; excluding those exposures improves downstream signal while retaining the good majority."
+    },
+    {
+      "id": "Q02",
+      "stage": "curate",
+      "scenario": "Curation acceptance rate is 96% with median CTF fit 3.1 A and uniform ice thickness.",
+      "question": "How should the agent proceed?",
+      "options": {
+        "A": "Abort \u00e2\u20ac\u201d acceptance is suspiciously high",
+        "B": "Re-pick with a larger diameter",
+        "C": "Tighten thresholds to reject more, to be safe",
+        "D": "Proceed; the dataset is healthy"
+      },
+      "answer": "D",
+      "rationale": "High acceptance with good CTF fits is a healthy dataset; over-tightening would discard usable data."
+    },
+    {
+      "id": "Q03",
+      "stage": "picking",
+      "scenario": "Blob picker returns ~8 picks/micrograph on a 150 kDa soluble protein at 1.0 A/pix.",
+      "question": "What does this most likely indicate?",
+      "options": {
+        "A": "The picker is missing particles or particle concentration is low",
+        "B": "The pixel size is wrong",
+        "C": "Too many junk picks",
+        "D": "Excellent picking"
+      },
+      "answer": "A",
+      "rationale": "Well-distributed grids usually yield tens-to-hundreds of picks/micrograph; ~8/mic suggests under-picking (diameter/threshold) or sparse particles."
+    },
+    {
+      "id": "Q04",
+      "stage": "2d_classification",
+      "scenario": "2D classification yields several high-resolution class averages with clear secondary structure plus many blurry/streaky classes.",
+      "question": "Best next step?",
+      "options": {
+        "A": "Select the sharp, high-detail classes and discard blurry/junk classes",
+        "B": "Discard the sharp classes as overfit",
+        "C": "Keep all classes for 3D",
+        "D": "Re-extract at a smaller box"
+      },
+      "answer": "A",
+      "rationale": "Selecting well-resolved classes removes junk/misaligned particles before 3D, improving ab-initio and refinement."
+    },
+    {
+      "id": "Q05",
+      "stage": "2d_selection",
+      "scenario": "A dataset of 1,735,240 particles after 2D. A fixed correlation threshold keeps only a small clean subset that refines to 3.21 A; recruiting the top 52% by reference correlation (1,280,400 particles) and re-refining gives 3.13 A.",
+      "question": "What does this tell you about the fixed threshold?",
+      "options": {
+        "A": "The fixed threshold was over-restrictive and discarded usable signal",
+        "B": "More particles always improve resolution regardless of quality",
+        "C": "The 3.13 A result must be an error",
+        "D": "The fixed threshold was optimal"
+      },
+      "answer": "A",
+      "rationale": "Recovering resolution by adaptively recruiting more particles shows the fixed cutoff removed particles that still carried usable high-resolution signal (real EMPIAR-10288 result)."
+    },
+    {
+      "id": "Q06",
+      "stage": "2d_selection",
+      "scenario": "Recruiting particles from top 52% to top 90% by correlation degrades resolution from 3.13 A to 3.6 A.",
+      "question": "Interpretation?",
+      "options": {
+        "A": "There is an optimum; beyond it added particles are mostly junk that hurts resolution",
+        "B": "Resolution is random",
+        "C": "Correlation scores are meaningless",
+        "D": "Always keep 90%"
+      },
+      "answer": "A",
+      "rationale": "Adaptive selection has a sweet spot; too-loose selection admits junk/misaligned particles that add noise, motivating closed-loop tuning over a fixed cutoff."
+    },
+    {
+      "id": "Q07",
+      "stage": "ab_initio",
+      "scenario": "Ab-initio reconstruction on 4,000 particles produces a low-resolution, noisy volume with poor angular coverage.",
+      "question": "Most likely fix?",
+      "options": {
+        "A": "Skip ab-initio and go straight to polishing",
+        "B": "Provide more clean particles (tens of thousands) for a stable ab-initio",
+        "C": "Use fewer particles",
+        "D": "Increase the symmetry to O"
+      },
+      "answer": "B",
+      "rationale": "Ab-initio stability needs sufficient clean particles and angular coverage; ~4k is often too few for a reliable de novo model."
+    },
+    {
+      "id": "Q08",
+      "stage": "symmetry",
+      "scenario": "Apoferritin is being processed but refinement is run in C1 and stalls at ~10 A on only 1,802 particles.",
+      "question": "What are the two most relevant issues?",
+      "options": {
+        "A": "Apoferritin has octahedral (O) symmetry that should be applied, and the particle count is far too low",
+        "B": "The map is fine; 10 A is expected",
+        "C": "Wrong pixel size and too much contrast",
+        "D": "Detector gain and beam tilt"
+      },
+      "answer": "A",
+      "rationale": "Apoferritin is O-symmetric; not applying symmetry wastes signal, and ~1.8k particles is far below what high-resolution reconstruction needs (real failure mode from our run)."
+    },
+    {
+      "id": "Q09",
+      "stage": "refinement",
+      "scenario": "Homogeneous refinement gives 3.96 A; switching to non-uniform refinement on the same particles gives 3.21 A.",
+      "question": "Why did non-uniform refinement help?",
+      "options": {
+        "A": "It used more particles",
+        "B": "It applied higher symmetry",
+        "C": "Adaptive regularization suppresses noise in disordered/solvent regions, improving alignment",
+        "D": "It lowered the pixel size"
+      },
+      "answer": "C",
+      "rationale": "Non-uniform refinement (Punjani 2020) applies cross-validated local filtering that improves alignment for membrane proteins/small particles."
+    },
+    {
+      "id": "Q10",
+      "stage": "refinement",
+      "scenario": "GS-FSC reports 3.13 A but the FSC curve shows a sharp spike near the mask edge and the map has a flat, featureless surface.",
+      "question": "What should the agent suspect?",
+      "options": {
+        "A": "The particle diameter is wrong",
+        "B": "The detector is broken",
+        "C": "Nothing; trust the number",
+        "D": "Mask-related overfitting / tight-mask artifact inflating the FSC"
+      },
+      "answer": "D",
+      "rationale": "An FSC spike at the mask boundary with poor map features suggests mask overfitting; the reported resolution may be optimistic and needs a looser/soft mask check."
+    },
+    {
+      "id": "Q11",
+      "stage": "resolution_reading",
+      "scenario": "The agent must report the resolution of a refinement job. The job document field shows 100.0; the event/stream log shows 'Using Filter Radius ... (3.134A)'.",
+      "question": "Which value is the true GS-FSC resolution?",
+      "options": {
+        "A": "Their average",
+        "B": "3.134 A from the stream log",
+        "C": "Neither is reliable",
+        "D": "100.0 from the job document"
+      },
+      "answer": "B",
+      "rationale": "The real GS-FSC resolution is emitted in the stream/event log; the 100.0 is a default placeholder (this was a real bug we fixed)."
+    },
+    {
+      "id": "Q12",
+      "stage": "ctf_refinement",
+      "scenario": "A 3.2 A GPCR map is limited by residual per-particle defocus and beam-tilt errors.",
+      "question": "Which step most directly addresses this?",
+      "options": {
+        "A": "Exposure curation",
+        "B": "Blob picking",
+        "C": "Global/local CTF refinement",
+        "D": "2D classification again"
+      },
+      "answer": "C",
+      "rationale": "CTF refinement corrects per-particle/per-group defocus and higher-order aberrations, often recovering resolution near the tail."
+    },
+    {
+      "id": "Q13",
+      "stage": "polishing",
+      "scenario": "Reference-based motion correction (polishing) fails on a dataset whose movies have inconsistent frame counts (some 30, some 40 frames).",
+      "question": "What is the correct diagnosis?",
+      "options": {
+        "A": "Polishing is never needed",
+        "B": "Heterogeneous frame counts break the polishing assumptions; harmonize/subset the movies first",
+        "C": "The GPU ran out of memory",
+        "D": "The particles are too clean"
+      },
+      "answer": "B",
+      "rationale": "Polishing models per-frame motion; inconsistent frame counts violate its input assumptions and cause failure (real failure we hit)."
+    },
+    {
+      "id": "Q14",
+      "stage": "benchmarking",
+      "scenario": "An autonomous pipeline reaches 3.21 A on EMPIAR-10288; the deposited structure and CryoSPARC's own benchmark reach 3.0 A on the same data.",
+      "question": "What is the honest conclusion?",
+      "options": {
+        "A": "Resolution differences this small are meaningless",
+        "B": "The deposited structure is wrong",
+        "C": "The pipeline is ~0.2 A worse than the reference; likely due to skipped polishing/CTF refinement",
+        "D": "The pipeline beats the baseline"
+      },
+      "answer": "C",
+      "rationale": "3.21 vs 3.0 A is a real gap; the missing polishing/CTF-refinement steps are the likely cause and a concrete thing to close."
+    },
+    {
+      "id": "Q15",
+      "stage": "adaptive_control",
+      "scenario": "A closed-loop selector adjusts the keep-fraction from resolution feedback with a keep-best rule: if a new selection refines worse, the previous best is retained.",
+      "question": "What safety property does keep-best guarantee?",
+      "options": {
+        "A": "It always reaches the target resolution",
+        "B": "It can never report a result worse than the baseline it started from",
+        "C": "It removes the need for refinement",
+        "D": "It uses fewer particles each iteration"
+      },
+      "answer": "B",
+      "rationale": "Keep-best is a monotone-improvement guard: the reported result is the arg-min resolution over evaluated iterations, so it is <= baseline."
+    },
+    {
+      "id": "Q16",
+      "stage": "adaptive_control",
+      "scenario": "Resolution (3.13 A) is above the target (3.0 A). The control law is theta(t+1)=clip(theta(t) - alpha*(res - target)).",
+      "question": "In which direction does the keep-threshold move, and what is the effect?",
+      "options": {
+        "A": "Threshold to zero -> keep none",
+        "B": "Threshold up -> keep fewer particles",
+        "C": "No change",
+        "D": "Threshold down -> recruit more particles"
+      },
+      "answer": "D",
+      "rationale": "res>target makes (res-target)>0, so theta decreases, lowering the acceptance bar and recruiting more particles to add signal."
+    },
+    {
+      "id": "Q17",
+      "stage": "llm_grounding",
+      "scenario": "An LLM critic is told: achieved 3.134 A, published reference 3.0 A. It replies 'the achieved resolution is better than the published reference.'",
+      "question": "Is the LLM's statement correct?",
+      "options": {
+        "A": "No \u00e2\u20ac\u201d smaller Angstrom is better, so 3.134 A is worse than 3.0 A",
+        "B": "Both are equal",
+        "C": "Cannot tell",
+        "D": "Yes, 3.134 is better"
+      },
+      "answer": "A",
+      "rationale": "Lower resolution value = higher detail; 3.134 A is worse than 3.0 A. This is a real LLM grounding error we observed and a target of the grounding audit."
+    },
+    {
+      "id": "Q18",
+      "stage": "heterogeneity",
+      "scenario": "3D refinement of a complex shows smeared density for one domain while the core is sharp.",
+      "question": "Best strategy?",
+      "options": {
+        "A": "Use 3D classification / local refinement to resolve compositional or conformational heterogeneity",
+        "B": "Re-run 2D only",
+        "C": "Report as-is",
+        "D": "Increase symmetry"
+      },
+      "answer": "A",
+      "rationale": "Localized blurring indicates flexibility/heterogeneity; 3D classification or masked local refinement resolves distinct states/domains."
+    },
+    {
+      "id": "Q19",
+      "stage": "orientation",
+      "scenario": "A membrane protein map is anisotropic with streaking along Z and the orientation distribution is concentrated in a few views.",
+      "question": "Root cause and remedy?",
+      "options": {
+        "A": "Wrong symmetry",
+        "B": "Too many particles",
+        "C": "Preferred orientation; collect tilted data or add detergent/surfactant to diversify views",
+        "D": "Detector error; recalibrate"
+      },
+      "answer": "C",
+      "rationale": "Concentrated views cause anisotropic resolution; tilt collection or grid/sample changes broaden angular coverage."
+    },
+    {
+      "id": "Q20",
+      "stage": "decision_value",
+      "scenario": "CryoSPARC Live already automates motion/CTF/streaming and reference-based auto-2D/3D selection.",
+      "question": "Where does an autonomous reasoning agent add the most value?",
+      "options": {
+        "A": "Redoing motion correction",
+        "B": "Strategic decisions and failure recovery on hard cases (heterogeneity, preferred orientation, novel targets) that fixed automation does not handle",
+        "C": "Faster GPU kernels",
+        "D": "Nothing; Live does everything"
+      },
+      "answer": "B",
+      "rationale": "Off-the-shelf automation handles the routine path; the agent's value is judgment/recovery on non-routine datasets where humans normally intervene."
+    },
+    {
+      "id": "Q21",
+      "stage": "extraction",
+      "scenario": "Particles are extracted in a box that is only slightly larger than the particle, clipping the CTF delocalization signal.",
+      "question": "Consequence and fix?",
+      "options": {
+        "A": "No effect; smaller box is fine",
+        "B": "Use a smaller pixel size",
+        "C": "Skip extraction",
+        "D": "High-resolution CTF signal is lost; use a larger box (typically >~1.5-2x particle diameter)"
+      },
+      "answer": "D",
+      "rationale": "Too-small boxes truncate delocalized high-frequency CTF signal, capping resolution; boxes should accommodate delocalization."
+    },
+    {
+      "id": "Q22",
+      "stage": "duplicates",
+      "scenario": "Two overlapping picks within a few Angstroms produce near-duplicate particles that survive into refinement.",
+      "question": "Why remove duplicates?",
+      "options": {
+        "A": "They speed up refinement",
+        "B": "They have no effect",
+        "C": "They improve angular coverage",
+        "D": "Duplicates violate the independence assumption of GS-FSC and can inflate apparent resolution"
+      },
+      "answer": "D",
+      "rationale": "Duplicate particles correlate the two half-sets, breaking gold-standard independence and biasing FSC."
+    },
+    {
+      "id": "Q23",
+      "stage": "mask",
+      "scenario": "A refinement uses a very tight mask hugging the model.",
+      "question": "Primary risk?",
+      "options": {
+        "A": "Mask overfitting that inflates the reported FSC/resolution",
+        "B": "Loss of symmetry",
+        "C": "Slower runtime only",
+        "D": "Under-masking noise"
+      },
+      "answer": "A",
+      "rationale": "Overly tight masks introduce correlations at the boundary and can produce artifactually high FSC values; soft/padded masks are safer."
+    },
+    {
+      "id": "Q24",
+      "stage": "failure_recovery",
+      "scenario": "An ACPS iteration selects 0 particles because the 3D reference is weak, and the subsequent refinement job would refine ~0 particles.",
+      "question": "Correct autonomous behavior?",
+      "options": {
+        "A": "Duplicate particles to reach the minimum",
+        "B": "Abort the whole pipeline",
+        "C": "Launch the refine and let it crash",
+        "D": "Guard: detect the too-few-particles case, skip the doomed refine, and keep the best prior result"
+      },
+      "answer": "D",
+      "rationale": "A minimum-particle guard prevents spawning a failing job and preserves the best result (a guard we added after a real 0-particle event)."
+    },
+    {
+      "id": "Q25",
+      "stage": "metric_choice",
+      "scenario": "Reporting the resolution of a final map for publication.",
+      "question": "Which criterion is standard?",
+      "options": {
+        "A": "The nominal Nyquist",
+        "B": "FSC = 0.5 unmasked",
+        "C": "Gold-standard FSC at the 0.143 threshold",
+        "D": "Whatever value is highest"
+      },
+      "answer": "C",
+      "rationale": "GS-FSC at 0.143 between independently refined half-maps is the field-standard resolution criterion."
+    },
+    {
+      "id": "Q26",
+      "stage": "compute",
+      "scenario": "A single 24 GB GPU is available and a non-uniform refinement of ~1.3M particles is required.",
+      "question": "Reasonable approach?",
+      "options": {
+        "A": "Run sequentially on the single GPU; monitor memory and reduce batch if needed",
+        "B": "Downsample to 10k particles",
+        "C": "Impossible on one GPU",
+        "D": "Requires 8 GPUs minimum"
+      },
+      "answer": "A",
+      "rationale": "Large refinements run on one GPU with sufficient VRAM (real run: ~14 GB used of 24 GB) given a sequential schedule."
+    },
+    {
+      "id": "Q27",
+      "stage": "target_setting",
+      "scenario": "A stretch target resolution is set below what the data can support so the adaptive loop keeps trying to improve.",
+      "question": "What is the effect of an unreachable target with keep-best?",
+      "options": {
+        "A": "It ignores the data",
+        "B": "It guarantees reaching the target",
+        "C": "The loop keeps exploring but never reports worse than baseline; it stops on its iteration budget",
+        "D": "The pipeline breaks"
+      },
+      "answer": "C",
+      "rationale": "An unreachable target simply drives continued exploration bounded by max-iterations; keep-best keeps the reported result safe."
+    },
+    {
+      "id": "Q28",
+      "stage": "data_suitability",
+      "scenario": "A dataset is a mixture of four different proteins imaged as single-frame micrographs (no movie frames).",
+      "question": "Why is this unsuitable for a single-structure C1 movie pipeline?",
+      "options": {
+        "A": "No movies means no motion correction/polishing, and a 4-protein mixture violates the single-structure assumption",
+        "B": "C1 fixes everything",
+        "C": "It is perfectly suitable",
+        "D": "Only the pixel size matters"
+      },
+      "answer": "A",
+      "rationale": "A single-structure movie pipeline needs multi-frame movies and a homogeneous target; a mixture without movies breaks both (real dataset we rejected)."
+    },
+    {
+      "id": "Q29",
+      "stage": "class_balance",
+      "scenario": "2D classification puts 80% of particles into 2 dominant classes and spreads the rest thinly across 50 classes.",
+      "question": "What might this indicate?",
+      "options": {
+        "A": "Symmetry is wrong",
+        "B": "Strong preferred orientation and/or many junk classes; inspect before selecting",
+        "C": "Perfect data",
+        "D": "The box is too large"
+      },
+      "answer": "B",
+      "rationale": "Heavy concentration in a couple of classes often reflects preferred views or dominant junk; requires inspection before 3D."
+    },
+    {
+      "id": "Q30",
+      "stage": "honesty",
+      "scenario": "A manuscript claims an adaptive-selection contribution, but the headline result was produced with the software's built-in fixed selection and no adaptive step.",
+      "question": "What is the correct scientific response?",
+      "options": {
+        "A": "Publish as-is",
+        "B": "Reconcile: run the adaptive method to produce the headline result, or clearly state which method produced which number",
+        "C": "Remove all numbers",
+        "D": "Claim the fixed method is adaptive"
+      },
+      "answer": "B",
+      "rationale": "Claims must match evidence; the fix is to connect the claimed method to the reported result or disclose the discrepancy (the exact issue a reviewer flagged in this project)."
+    }
+  ]
+}

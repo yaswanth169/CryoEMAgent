@@ -1,0 +1,147 @@
+{
+  "run_id": "d5b714c4-0b3f-42c2-8771-322fa8a048e3",
+  "workflow_id": "w1_w2_standard",
+  "status": "completed",
+  "current_stage": "w2",
+  "current_step": "done",
+  "checkpoint_required": false,
+  "checkpoint_message": "",
+  "checkpoint_job_uid": "",
+  "workspace_w1_uid": "W56",
+  "workspace_w2_uid": "W57",
+  "jobs": {
+    "import_movies": "J239",
+    "patch_motion": "J240",
+    "patch_ctf": "J241",
+    "curate": "J242",
+    "blob_picker": "J243",
+    "extract_blob": "J244",
+    "class2d_blob": "J245",
+    "select2d_blob": "J246",
+    "abinit_blob": "J247",
+    "homo_blob": "J248",
+    "template_picker": "J249",
+    "extract_template": "J250",
+    "class2d_template": "J252",
+    "select2d_template": "J253",
+    "abinit_template": "J254",
+    "homo_template": "J255",
+    "nonuniform_template": "J256",
+    "ctf_refine": "J257",
+    "polish_skipped": "skipped"
+  },
+  "errors": {},
+  "config": {
+    "cryosparc": {
+      "base_url": "http://localhost:39000",
+      "license_id": "e1674060-08f7-11f1-aee8-9f3875918fa6",
+      "email": "meiyuan@andrew.cmu.edu",
+      "password": "MeiYuan123",
+      "lane": "default",
+      "project_uid": "P3",
+      "workspace_w1_title": "W1_blob_tools",
+      "workspace_w2_title": "W2_template_tools"
+    },
+    "data": {
+      "movie_blob_path": "/shared/scratch/0/home/v_yaswanth_devavarapu/empiar/10288/*.tif",
+      "gainref_path": "",
+      "psize_A": 0.86,
+      "accel_kv": 300,
+      "cs_mm": 2.7,
+      "total_dose_e_per_A2": 60.0
+    },
+    "compute": {
+      "import_gpus": [],
+      "motion_gpus": [
+        0
+      ],
+      "ctf_gpus": [
+        0
+      ],
+      "picker_gpus": [
+        0
+      ],
+      "extract_gpus": [
+        0
+      ],
+      "class2d_gpus": [
+        0
+      ],
+      "abinit_gpus": [
+        0
+      ],
+      "homo_gpus": [
+        0
+      ],
+      "nonuniform_gpus": [
+        1
+      ],
+      "polish_gpus": [
+        0
+      ]
+    },
+    "workflow": {
+      "auto_interactive": false,
+      "target_resolution_A": 3.5,
+      "acps_max_iters": 0,
+      "max_2d_classes": 100,
+      "class2d_batchsize_per_class": 50,
+      "picker_params": {
+        "diameter": 150
+      },
+      "curate_params": {
+        "auto_threshold_ctf_fit_to_A": "0,5.0",
+        "auto_threshold_ice_thickness_rel": "0,1.2"
+      },
+      "reference_select_params": {
+        "alpha_min": 0.75,
+        "res_filter": 20.0
+      },
+      "job_types": {
+        "import_movies": "import_movies",
+        "patch_motion": "patch_motion_correction_multi",
+        "patch_ctf": "patch_ctf_estimation_multi",
+        "curate": "curate_exposures_v2",
+        "blob_picker": "blob_picker_gpu",
+        "template_picker": "template_picker_gpu",
+        "inspect_picks": "inspect_picks_v2",
+        "extract": "extract_micrographs_multi",
+        "class2d": "class_2D_new",
+        "select2d": "select_2D",
+        "reference_select": "reference_select_2D",
+        "junk_detector": "junk_detector_v1",
+        "abinit": "homo_abinit",
+        "homo_refine": "homo_refine_new",
+        "nonuniform_refine": "nonuniform_refine_new",
+        "ctf_refine": "ctf_refine_global",
+        "polish": "reference_motion_correction"
+      },
+      "outputs": {
+        "import_movies": "imported_movies",
+        "motion_micrographs": "micrographs",
+        "ctf_exposures": "exposures",
+        "curate_accepted": "exposures_accepted",
+        "inspect_particles": "particles",
+        "inspect_micrographs": "micrographs",
+        "extract_particles": "particles",
+        "class2d_templates": "class_averages",
+        "class2d_particles": "particles",
+        "select2d_particles_selected": "particles_selected",
+        "select2d_templates_selected": "templates_selected",
+        "reference_select_particles": "particles_selected",
+        "reference_select_templates": "templates_selected",
+        "abinit_particles_class_0": "particles_class_0",
+        "abinit_particles_unused": "particles_unused",
+        "abinit_volume_class_0": "volume_class_0",
+        "homo_volume": "volume",
+        "nonuniform_particles": "particles",
+        "nonuniform_volume": "volume",
+        "ctf_refine_particles": "particles",
+        "polish_particles": "particles",
+        "polish_volume": "volume"
+      }
+    }
+  },
+  "created_at": "2026-06-05T05:23:12.066100+00:00",
+  "updated_at": "2026-06-06T02:03:21.036498+00:00"
+}

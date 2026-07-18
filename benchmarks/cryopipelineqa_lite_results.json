@@ -1,0 +1,441 @@
+{
+  "benchmark": "CryoPipelineQA-lite",
+  "n_items": 30,
+  "run_utc": "2026-07-07T19:24:29.612841+00:00",
+  "models": {
+    "gpt-4o": {
+      "accuracy": 0.967,
+      "correct": 29,
+      "total": 30,
+      "rows": [
+        {
+          "id": "Q01",
+          "stage": "curate",
+          "gold": "B",
+          "pred": "B",
+          "correct": true
+        },
+        {
+          "id": "Q02",
+          "stage": "curate",
+          "gold": "D",
+          "pred": "D",
+          "correct": true
+        },
+        {
+          "id": "Q03",
+          "stage": "picking",
+          "gold": "A",
+          "pred": "A",
+          "correct": true
+        },
+        {
+          "id": "Q04",
+          "stage": "2d_classification",
+          "gold": "A",
+          "pred": "A",
+          "correct": true
+        },
+        {
+          "id": "Q05",
+          "stage": "2d_selection",
+          "gold": "A",
+          "pred": "A",
+          "correct": true
+        },
+        {
+          "id": "Q06",
+          "stage": "2d_selection",
+          "gold": "A",
+          "pred": "A",
+          "correct": true
+        },
+        {
+          "id": "Q07",
+          "stage": "ab_initio",
+          "gold": "B",
+          "pred": "B",
+          "correct": true
+        },
+        {
+          "id": "Q08",
+          "stage": "symmetry",
+          "gold": "A",
+          "pred": "A",
+          "correct": true
+        },
+        {
+          "id": "Q09",
+          "stage": "refinement",
+          "gold": "C",
+          "pred": "C",
+          "correct": true
+        },
+        {
+          "id": "Q10",
+          "stage": "refinement",
+          "gold": "D",
+          "pred": "D",
+          "correct": true
+        },
+        {
+          "id": "Q11",
+          "stage": "resolution_reading",
+          "gold": "B",
+          "pred": "B",
+          "correct": true
+        },
+        {
+          "id": "Q12",
+          "stage": "ctf_refinement",
+          "gold": "C",
+          "pred": "C",
+          "correct": true
+        },
+        {
+          "id": "Q13",
+          "stage": "polishing",
+          "gold": "B",
+          "pred": "B",
+          "correct": true
+        },
+        {
+          "id": "Q14",
+          "stage": "benchmarking",
+          "gold": "C",
+          "pred": "C",
+          "correct": true
+        },
+        {
+          "id": "Q15",
+          "stage": "adaptive_control",
+          "gold": "B",
+          "pred": "B",
+          "correct": true
+        },
+        {
+          "id": "Q16",
+          "stage": "adaptive_control",
+          "gold": "D",
+          "pred": "B",
+          "correct": false
+        },
+        {
+          "id": "Q17",
+          "stage": "llm_grounding",
+          "gold": "A",
+          "pred": "A",
+          "correct": true
+        },
+        {
+          "id": "Q18",
+          "stage": "heterogeneity",
+          "gold": "A",
+          "pred": "A",
+          "correct": true
+        },
+        {
+          "id": "Q19",
+          "stage": "orientation",
+          "gold": "C",
+          "pred": "C",
+          "correct": true
+        },
+        {
+          "id": "Q20",
+          "stage": "decision_value",
+          "gold": "B",
+          "pred": "B",
+          "correct": true
+        },
+        {
+          "id": "Q21",
+          "stage": "extraction",
+          "gold": "D",
+          "pred": "D",
+          "correct": true
+        },
+        {
+          "id": "Q22",
+          "stage": "duplicates",
+          "gold": "D",
+          "pred": "D",
+          "correct": true
+        },
+        {
+          "id": "Q23",
+          "stage": "mask",
+          "gold": "A",
+          "pred": "A",
+          "correct": true
+        },
+        {
+          "id": "Q24",
+          "stage": "failure_recovery",
+          "gold": "D",
+          "pred": "D",
+          "correct": true
+        },
+        {
+          "id": "Q25",
+          "stage": "metric_choice",
+          "gold": "C",
+          "pred": "C",
+          "correct": true
+        },
+        {
+          "id": "Q26",
+          "stage": "compute",
+          "gold": "A",
+          "pred": "A",
+          "correct": true
+        },
+        {
+          "id": "Q27",
+          "stage": "target_setting",
+          "gold": "C",
+          "pred": "C",
+          "correct": true
+        },
+        {
+          "id": "Q28",
+          "stage": "data_suitability",
+          "gold": "A",
+          "pred": "A",
+          "correct": true
+        },
+        {
+          "id": "Q29",
+          "stage": "class_balance",
+          "gold": "B",
+          "pred": "B",
+          "correct": true
+        },
+        {
+          "id": "Q30",
+          "stage": "honesty",
+          "gold": "B",
+          "pred": "B",
+          "correct": true
+        }
+      ]
+    },
+    "gpt-4o-mini": {
+      "accuracy": 0.967,
+      "correct": 29,
+      "total": 30,
+      "rows": [
+        {
+          "id": "Q01",
+          "stage": "curate",
+          "gold": "B",
+          "pred": "B",
+          "correct": true
+        },
+        {
+          "id": "Q02",
+          "stage": "curate",
+          "gold": "D",
+          "pred": "D",
+          "correct": true
+        },
+        {
+          "id": "Q03",
+          "stage": "picking",
+          "gold": "A",
+          "pred": "A",
+          "correct": true
+        },
+        {
+          "id": "Q04",
+          "stage": "2d_classification",
+          "gold": "A",
+          "pred": "A",
+          "correct": true
+        },
+        {
+          "id": "Q05",
+          "stage": "2d_selection",
+          "gold": "A",
+          "pred": "A",
+          "correct": true
+        },
+        {
+          "id": "Q06",
+          "stage": "2d_selection",
+          "gold": "A",
+          "pred": "A",
+          "correct": true
+        },
+        {
+          "id": "Q07",
+          "stage": "ab_initio",
+          "gold": "B",
+          "pred": "B",
+          "correct": true
+        },
+        {
+          "id": "Q08",
+          "stage": "symmetry",
+          "gold": "A",
+          "pred": "A",
+          "correct": true
+        },
+        {
+          "id": "Q09",
+          "stage": "refinement",
+          "gold": "C",
+          "pred": "C",
+          "correct": true
+        },
+        {
+          "id": "Q10",
+          "stage": "refinement",
+          "gold": "D",
+          "pred": "D",
+          "correct": true
+        },
+        {
+          "id": "Q11",
+          "stage": "resolution_reading",
+          "gold": "B",
+          "pred": "B",
+          "correct": true
+        },
+        {
+          "id": "Q12",
+          "stage": "ctf_refinement",
+          "gold": "C",
+          "pred": "C",
+          "correct": true
+        },
+        {
+          "id": "Q13",
+          "stage": "polishing",
+          "gold": "B",
+          "pred": "B",
+          "correct": true
+        },
+        {
+          "id": "Q14",
+          "stage": "benchmarking",
+          "gold": "C",
+          "pred": "C",
+          "correct": true
+        },
+        {
+          "id": "Q15",
+          "stage": "adaptive_control",
+          "gold": "B",
+          "pred": "B",
+          "correct": true
+        },
+        {
+          "id": "Q16",
+          "stage": "adaptive_control",
+          "gold": "D",
+          "pred": "B",
+          "correct": false
+        },
+        {
+          "id": "Q17",
+          "stage": "llm_grounding",
+          "gold": "A",
+          "pred": "A",
+          "correct": true
+        },
+        {
+          "id": "Q18",
+          "stage": "heterogeneity",
+          "gold": "A",
+          "pred": "A",
+          "correct": true
+        },
+        {
+          "id": "Q19",
+          "stage": "orientation",
+          "gold": "C",
+          "pred": "C",
+          "correct": true
+        },
+        {
+          "id": "Q20",
+          "stage": "decision_value",
+          "gold": "B",
+          "pred": "B",
+          "correct": true
+        },
+        {
+          "id": "Q21",
+          "stage": "extraction",
+          "gold": "D",
+          "pred": "D",
+          "correct": true
+        },
+        {
+          "id": "Q22",
+          "stage": "duplicates",
+          "gold": "D",
+          "pred": "D",
+          "correct": true
+        },
+        {
+          "id": "Q23",
+          "stage": "mask",
+          "gold": "A",
+          "pred": "A",
+          "correct": true
+        },
+        {
+          "id": "Q24",
+          "stage": "failure_recovery",
+          "gold": "D",
+          "pred": "D",
+          "correct": true
+        },
+        {
+          "id": "Q25",
+          "stage": "metric_choice",
+          "gold": "C",
+          "pred": "C",
+          "correct": true
+        },
+        {
+          "id": "Q26",
+          "stage": "compute",
+          "gold": "A",
+          "pred": "A",
+          "correct": true
+        },
+        {
+          "id": "Q27",
+          "stage": "target_setting",
+          "gold": "C",
+          "pred": "C",
+          "correct": true
+        },
+        {
+          "id": "Q28",
+          "stage": "data_suitability",
+          "gold": "A",
+          "pred": "A",
+          "correct": true
+        },
+        {
+          "id": "Q29",
+          "stage": "class_balance",
+          "gold": "B",
+          "pred": "B",
+          "correct": true
+        },
+        {
+          "id": "Q30",
+          "stage": "honesty",
+          "gold": "B",
+          "pred": "B",
+          "correct": true
+        }
+      ]
+    }
+  }
+}

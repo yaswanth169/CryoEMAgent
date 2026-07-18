@@ -87,40 +87,18 @@ class TestPlanner:
         assert len(plan.actions) >= 1
         assert plan.actions[0].action_type == ActionType.CREATE_JOB
     
-    def test_parse_plan_valid_json(self):
+    def test_react_decide_fallback_on_empty_api_key(self):
+        config = LLMConfig(api_key="")
+        planner = Planner(config)
+        result = planner.react_decide("state", "quality", "history")
+        assert result["decision"] in ("CONTINUE", "ADJUST", "ESCALATE")
+
+    def test_fallback_decision_returns_continue(self):
         config = LLMConfig(api_key="test-key")
         planner = Planner(config)
-        
-        response = '''
-        {
-            "goal": "Continue processing",
-            "reasoning": "Moving to next step",
-            "actions": [
-                {
-                    "action_type": "create_job",
-                    "parameters": {"job_type": "motion_correction"},
-                    "reasoning": "Correct motion"
-                }
-            ],
-            "contingency": "Retry"
-        }
-        '''
-        
-        plan = planner._parse_plan(response)
-        
-        assert plan.goal == "Continue processing"
-        assert len(plan.actions) == 1
-        assert plan.actions[0].action_type == ActionType.CREATE_JOB
-    
-    def test_parse_plan_invalid_json(self):
-        config = LLMConfig(api_key="test-key")
-        planner = Planner(config)
-        
-        response = "This is not valid JSON"
-        
-        plan = planner._parse_plan(response)
-        
-        assert plan.actions[0].action_type == ActionType.FINISH
+        result = planner._fallback_decision("simulated error")
+        assert result["decision"] == "CONTINUE"
+        assert "reasoning" in result
 
 
 class TestActionType:

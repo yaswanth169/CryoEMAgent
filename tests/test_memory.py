@@ -69,11 +69,11 @@ class TestEpisodicMemory:
     
     def test_add_decision(self):
         memory = EpisodicMemory()
-        memory.add_decision("Execute import", "Starting workflow")
-        
-        assert len(memory.decisions) == 1
-        assert memory.decisions[0]["decision"] == "Execute import"
-        assert memory.decisions[0]["reasoning"] == "Starting workflow"
+        memory.add_decision(step="import_movies", decision="Execute import", reasoning="Starting workflow")
+
+        assert len(memory.decision_log) == 1
+        assert memory.decision_log[0]["decision"] == "Execute import"
+        assert memory.decision_log[0]["reasoning"] == "Starting workflow"
     
     def test_add_job(self):
         memory = EpisodicMemory()

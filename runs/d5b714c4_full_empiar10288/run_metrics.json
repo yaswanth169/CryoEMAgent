@@ -1,0 +1,33 @@
+{
+  "run_id": "d5b714c4-0b3f-42c2-8771-322fa8a048e3",
+  "dataset": "EMPIAR-10288 CB1-GPCR (full, 2756 movies, 0.86 A)",
+  "final_resolution_A": 3.21,
+  "final_volume_job": "J256 (NU-Refine)",
+  "final_particles": 620174,
+  "w1_blob": {
+    "picked": 505029,
+    "extracted": 144556,
+    "homo_res_A": 4.1,
+    "homo_particles": 83750
+  },
+  "w2_template": {
+    "picked": 1993908,
+    "extracted": 1735240,
+    "ref_select_kept": 620174,
+    "ref_select_pct": 36,
+    "homo_res_A": 3.96,
+    "nu_refine_res_A": 3.21,
+    "nu_refine_particles": 620174
+  },
+  "curate": {
+    "accepted": 2181,
+    "rejected": 572,
+    "rejected_pct": 21
+  },
+  "jobs_succeeded": 18,
+  "jobs_failed": 2,
+  "failures": {
+    "J251_2d_class": "CUDA OOM (384 classes) - auto-recovered as J252 with 100 classes",
+    "J258_polish": "mixed 30/40 frame movies - data limitation, skipped"
+  }
+}
